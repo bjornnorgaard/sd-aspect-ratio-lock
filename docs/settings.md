@@ -2,7 +2,7 @@
 
 All options live under **Settings → Aspect Ratio Lock**. Keys use the `arl_` prefix.
 
-Restart (or reload UI) after changing JS-related options so the client script picks them up.
+Restart (or reload UI) after changing JS-related options so the client script picks them up. The ratio dropdown next to the W/H swap appears only after a full UI load once `opts` is available — a hard refresh or WebUI restart is enough.
 
 ## JavaScript controls
 

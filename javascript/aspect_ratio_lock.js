@@ -2,7 +2,8 @@
  * Client-side aspect-ratio lock for Forge Neo width/height sliders.
  *
  * Injects a dropdown (or cycle button) next to the swap control and keeps W/H
- * linked while dragging. Reads settings from window.opts.arl_*.
+ * linked while dragging. Reads settings from the Forge global `opts` (not
+ * window.opts — that property is never set on Forge Neo).
  *
  * Inspired by thomasasfk/sd-webui-aspect-ratio-helper; adapted for Gradio 4 /
  * ForgeCanvas (forge-image-container img selectors).
@@ -31,6 +32,15 @@
         "div[data-testid=image] img",
         "img",
     ];
+
+    function getOpts() {
+        // Forge Neo: top-level `let opts` in ui.js — bare global, not window.opts.
+        try {
+            return typeof opts !== "undefined" ? opts : null;
+        } catch (_) {
+            return null;
+        }
+    }
 
     function getSelectedImage2ImageTab() {
         if (typeof get_tab_index === "function") {
@@ -100,10 +110,11 @@
     }
 
     function getConfiguredRatios() {
-        const raw = (window.opts && window.opts.arl_javascript_aspect_ratio) || "";
+        const o = getOpts();
+        const raw = (o && o.arl_javascript_aspect_ratio) || "";
         return raw
             .split(",")
-            .map((o) => o.trim())
+            .map((x) => x.trim())
             .filter(Boolean);
     }
 
@@ -151,7 +162,10 @@
             }
 
             this.getPickerElement().onchange = this.pickerChanged(controller);
-            this.switchButton.onclick = this.switchButtonOnclick(controller);
+            this.switchButton.addEventListener(
+                "click",
+                this.switchButtonOnclick(controller),
+            );
         }
 
         getOptions(defaultOptions) {
@@ -321,8 +335,8 @@
                 });
             });
 
-            const method =
-                window.opts && window.opts.arl_ui_javascript_selection_method;
+            const o = getOpts();
+            const method = o && o.arl_ui_javascript_selection_method;
             if (method === "Default Options Button") {
                 this.optionPickingControler = new DefaultOptionsButtonOptionPickingController(
                     page,
@@ -450,42 +464,61 @@
             }
         }
 
+        /**
+         * Try to mount once opts + width/height exist. Returns true when done
+         * (mounted, disabled by setting, or already present).
+         */
+        static tryInit(key, page, defaultOptions, postSetup) {
+            const o = getOpts();
+            if (!o || o.arl_javascript_aspect_ratio_show === undefined) {
+                return false;
+            }
+
+            if (!o.arl_javascript_aspect_ratio_show) {
+                console.warn(
+                    "[Aspect Ratio Lock] JavaScript controls disabled in Settings.",
+                );
+                return true;
+            }
+
+            if (gradioApp().getElementById(`${page}_size_toolbox`)) {
+                return true;
+            }
+
+            const widthContainer = gradioApp().querySelector(`#${page}_width`);
+            const heightContainer = gradioApp().querySelector(`#${page}_height`);
+            if (!widthContainer || !heightContainer) {
+                return false;
+            }
+
+            try {
+                const controller = new AspectRatioController(
+                    page,
+                    widthContainer,
+                    heightContainer,
+                    defaultOptions,
+                );
+                if (typeof postSetup === "function") {
+                    postSetup(controller);
+                }
+                window[key] = controller;
+            } catch (err) {
+                console.warn("[Aspect Ratio Lock] init failed:", err);
+                return true;
+            }
+            return true;
+        }
+
         static observeStartup(key, page, defaultOptions, postSetup) {
+            if (AspectRatioController.tryInit(key, page, defaultOptions, postSetup)) {
+                return;
+            }
+
             const observer = new MutationObserver(() => {
-                const widthContainer = gradioApp().querySelector(`#${page}_width`);
-                const heightContainer = gradioApp().querySelector(`#${page}_height`);
-
-                if (
-                    widthContainer &&
-                    heightContainer &&
-                    window.opts &&
-                    window.opts.arl_javascript_aspect_ratio_show !== undefined
-                ) {
+                if (AspectRatioController.tryInit(key, page, defaultOptions, postSetup)) {
                     observer.disconnect();
-                    if (!window.opts.arl_javascript_aspect_ratio_show) {
-                        return;
-                    }
-                    if (gradioApp().getElementById(`${page}_size_toolbox`)) {
-                        return;
-                    }
-
-                    try {
-                        const controller = new AspectRatioController(
-                            page,
-                            widthContainer,
-                            heightContainer,
-                            defaultOptions,
-                        );
-                        if (typeof postSetup === "function") {
-                            postSetup(controller);
-                        }
-                        window[key] = controller;
-                    } catch (err) {
-                        console.warn("[Aspect Ratio Lock]", err);
-                    }
                 }
             });
-
             observer.observe(gradioApp(), { childList: true, subtree: true });
         }
     }
@@ -548,7 +581,11 @@
         );
     }
 
-    if (typeof onUiLoaded === "function") {
+    // Prefer onOptionsAvailable: opts is filled async after UI load, without a
+    // guaranteed follow-up DOM mutation for our MutationObserver.
+    if (typeof onOptionsAvailable === "function") {
+        onOptionsAvailable(start);
+    } else if (typeof onUiLoaded === "function") {
         onUiLoaded(start);
     } else {
         document.addEventListener("DOMContentLoaded", start);

@@ -29,6 +29,12 @@ Option keys and CSS/JS IDs use the `arl_` / `arl-` prefix. Settings section id i
 - img2img “Image” ratio must work with ForgeCanvas: prefer `div.forge-image-container img` and `input.forge-file-upload`.
 - Call global `dimensionChange` when present so the built-in AR overlay stays correct.
 
+## JavaScript / Forge globals
+
+- Read settings from the bare global `opts` (Forge `javascript/ui.js`). **Never use `window.opts`** — Forge Neo does not assign it.
+- Boot with `onOptionsAvailable(...)` so init runs after `opts` is parsed from `#settings_json`. Do not rely only on a MutationObserver after `onUiLoaded`: `opts` can become ready without a further DOM mutation.
+- Try mounting immediately when width/height exist; keep a MutationObserver only as a fallback until init succeeds.
+
 ## When changing math
 
 1. Edit `lib_aspect_ratio_lock/util.py`.
