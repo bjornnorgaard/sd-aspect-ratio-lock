@@ -11,12 +11,15 @@
 (function () {
     "use strict";
 
-    const OFF = "Off";
-    const LOCK = "🔒";
-    const IMAGE = "🖼️";
+    const Core = globalThis.ArlCore;
+    if (!Core) {
+        console.error(
+            "[Aspect Ratio Lock] arl_core.js missing — load order broken?",
+        );
+        return;
+    }
 
-    const MAXIMUM_DIMENSION = 2048;
-    const MINIMUM_DIMENSION = 64;
+    const { OFF, LOCK, IMAGE, MAXIMUM_DIMENSION, MINIMUM_DIMENSION } = Core;
 
     // Match Forge Neo's own aspectRatioOverlay.js tab → container mapping.
     const IMAGE_INPUT_CONTAINER_IDS = [
@@ -69,46 +72,6 @@
         return container.querySelector("img");
     }
 
-    function roundToClosestMultiple(num, multiple) {
-        return Math.round(Number(num) / multiple) * multiple;
-    }
-
-    function aspectRatioFromStr(ar) {
-        if (!ar.includes(":")) return;
-        return ar.split(":").map((x) => Number(x));
-    }
-
-    function reverseAspectRatio(ar) {
-        if (!ar.includes(":")) return;
-        const [width, height] = ar.split(":");
-        return `${height}:${width}`;
-    }
-
-    function clampToBoundaries(width, height) {
-        const aspectRatio = width / height;
-        width = Math.max(Math.min(width, MAXIMUM_DIMENSION), MINIMUM_DIMENSION);
-        height = Math.max(Math.min(height, MAXIMUM_DIMENSION), MINIMUM_DIMENSION);
-        if (width / height > aspectRatio) {
-            height = Math.round(width / aspectRatio);
-        } else if (width / height < aspectRatio) {
-            width = Math.round(height * aspectRatio);
-        }
-
-        if (width > MAXIMUM_DIMENSION) {
-            width = MAXIMUM_DIMENSION;
-        } else if (width < MINIMUM_DIMENSION) {
-            width = MINIMUM_DIMENSION;
-        }
-
-        if (height < MINIMUM_DIMENSION) {
-            height = MINIMUM_DIMENSION;
-        } else if (height > MAXIMUM_DIMENSION) {
-            height = MAXIMUM_DIMENSION;
-        }
-
-        return [width, height];
-    }
-
     function getConfiguredRatios() {
         const o = getOpts();
         const raw = (o && o.arl_javascript_aspect_ratio) || "";
@@ -123,7 +86,7 @@
             gradioApp().querySelectorAll(".arl-ar-option"),
         );
         allAspectRatioOptions.forEach((el) => {
-            const reversed = reverseAspectRatio(el.value);
+            const reversed = Core.reverseAspectRatio(el.value);
             if (reversed) {
                 el.value = reversed;
                 el.textContent = reversed;
@@ -182,18 +145,21 @@
             };
         }
 
+        /**
+         * Forge Neo already swaps W↔H via Gradio on this button. Only flip the
+         * stored ratio / dropdown labels so a later slider drag keeps the new
+         * orientation — do not rewrite dimensions here (that races Gradio).
+         */
         switchButtonOnclick(controller) {
             return () => {
                 reverseAllOptions();
-                const picked = this.getCurrentOption();
-                if (picked === LOCK) {
-                    controller.setAspectRatio(
-                        `${controller.heightRatio}:${controller.widthRatio}`,
-                    );
-                } else {
-                    controller.setAspectRatio(picked);
-                }
+                this.reverseLocalOptions();
+                controller.flipAspectRatio(this.getCurrentOption());
             };
+        }
+
+        reverseLocalOptions() {
+            this.options = Core.reverseRatioOptions(this.options);
         }
 
         getElementInnerHTML() {
@@ -249,6 +215,14 @@
             };
         }
 
+        reverseLocalOptions() {
+            super.reverseLocalOptions();
+            const button = this.getPickerElement().querySelector("button");
+            if (button) {
+                button.textContent = this.getCurrentOption();
+            }
+        }
+
         getElementInnerHTML() {
             const classes = Array.from(this.switchButton.classList);
             return `
@@ -296,13 +270,13 @@
 
         updateMin(value) {
             this.inputs.forEach((input) => {
-                input.min = roundToClosestMultiple(Number(value), 8);
+                input.min = Core.roundToClosestMultiple(Number(value), 8);
             });
         }
 
         updateMax(value) {
             this.inputs.forEach((input) => {
-                input.max = roundToClosestMultiple(Number(value), 8);
+                input.max = Core.roundToClosestMultiple(Number(value), 8);
             });
         }
 
@@ -313,7 +287,7 @@
         }
 
         setVal(value) {
-            const newValue = roundToClosestMultiple(Number(value), 8);
+            const newValue = Core.roundToClosestMultiple(Number(value), 8);
             this.updateVal(newValue);
         }
     }
@@ -355,7 +329,7 @@
         }
 
         updateInputStates() {
-            if (this.isLandscapeOrSquare()) {
+            if (Core.isLandscapeOrSquare(this.widthRatio, this.heightRatio)) {
                 const AR = this.widthRatio / this.heightRatio;
 
                 const minWidthByAr = Math.round(MINIMUM_DIMENSION * AR);
@@ -390,7 +364,7 @@
         }
 
         isLandscapeOrSquare() {
-            return this.widthRatio >= this.heightRatio;
+            return Core.isLandscapeOrSquare(this.widthRatio, this.heightRatio);
         }
 
         setAspectRatio(aspectRatio) {
@@ -408,10 +382,12 @@
                 wR = this.widthContainer.getVal();
                 hR = this.heightContainer.getVal();
             } else {
-                [wR, hR] = aspectRatioFromStr(aspectRatio);
+                const parsed = Core.aspectRatioFromStr(aspectRatio);
+                if (!parsed) return this.disable();
+                [wR, hR] = parsed;
             }
 
-            [wR, hR] = clampToBoundaries(wR, hR);
+            [wR, hR] = Core.clampToBoundaries(wR, hR);
 
             this.widthRatio = wR;
             this.heightRatio = hR;
@@ -419,34 +395,47 @@
             this.maintainAspectRatio();
         }
 
+        /**
+         * Sync internal ratios after Forge swaps W/H. Does not touch slider
+         * values — Gradio owns that swap on `_res_switch_btn`.
+         */
+        flipAspectRatio(picked) {
+            const next = Core.ratiosAfterFlip(
+                picked,
+                this.widthRatio,
+                this.heightRatio,
+            );
+            if (!next) return;
+
+            this.aspectRatio = next.aspectRatio;
+            this.widthRatio = next.widthRatio;
+            this.heightRatio = next.heightRatio;
+            this.updateInputStates();
+        }
+
         maintainAspectRatio(changedElement) {
             if (this.aspectRatio === OFF) return;
+
+            let changedValue;
+            let changedIsWidth;
             if (!changedElement) {
-                const allValues = Object.values(this.inputs).map((x) => Number(x.value));
-                changedElement = { value: Math.max(...allValues) };
-            }
-
-            const aspectRatio = this.widthRatio / this.heightRatio;
-            let w;
-            let h;
-
-            if (changedElement.isWidth === undefined) {
-                if (this.isLandscapeOrSquare()) {
-                    w = Math.round(changedElement.value);
-                    h = Math.round(changedElement.value / aspectRatio);
-                } else {
-                    h = Math.round(changedElement.value);
-                    w = Math.round(changedElement.value * aspectRatio);
-                }
-            } else if (changedElement.isWidth) {
-                w = Math.round(changedElement.value);
-                h = Math.round(changedElement.value / aspectRatio);
+                changedValue = Math.max(
+                    ...this.inputs.map((x) => Number(x.value)),
+                );
+                changedIsWidth = undefined;
             } else {
-                h = Math.round(changedElement.value);
-                w = Math.round(changedElement.value * aspectRatio);
+                changedValue = Number(changedElement.value);
+                changedIsWidth = changedElement.isWidth;
             }
 
-            const [width, height] = clampToBoundaries(w, h);
+            const [width, height] = Core.maintainDimensions({
+                widthRatio: this.widthRatio,
+                heightRatio: this.heightRatio,
+                changedValue,
+                changedIsWidth,
+                currentWidth: this.widthContainer.getVal(),
+                currentHeight: this.heightContainer.getVal(),
+            });
 
             const inputEvent = new Event("input", { bubbles: true });
             this.widthContainer.setVal(width);

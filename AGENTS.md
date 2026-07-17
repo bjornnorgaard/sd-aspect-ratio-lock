@@ -14,6 +14,7 @@ This repo is a Forge Neo extension. Keep it aligned with sibling `sd-dynamic-pla
 |---|---|
 | `scripts/aspect_ratio_lock.py` | WebUI entry: `scripts.Script` + `on_ui_settings` |
 | `lib_aspect_ratio_lock/` | Pure / Gradio helpers (`util`, `settings`, `components`, `constants`) |
+| `javascript/arl_core.js` | Pure ratio/flip math (shared with Node tests) |
 | `javascript/aspect_ratio_lock.js` | Client-side ratio lock (main interactive behaviour) |
 | `style.css` | Scoped styles (`arl-` / `#*_size_toolbox`) |
 | `tests/` | Standalone unit tests |
