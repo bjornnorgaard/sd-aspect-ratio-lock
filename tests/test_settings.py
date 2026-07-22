@@ -51,6 +51,7 @@ class SettingsDefaultsTests(unittest.TestCase):
             constants.ARL_UI_JAVASCRIPT_SELECTION_METHOD,
             constants.ARL_JAVASCRIPT_ASPECT_RATIO_SHOW_KEY,
             constants.ARL_JAVASCRIPT_ASPECT_RATIOS_KEY,
+            constants.ARL_JAVASCRIPT_RESOLUTION_PRESETS_SHOW_KEY,
             constants.ARL_SHOW_MAX_WIDTH_OR_HEIGHT_KEY,
             constants.ARL_MAX_WIDTH_OR_HEIGHT_KEY,
             constants.ARL_SHOW_MIN_WIDTH_OR_HEIGHT_KEY,

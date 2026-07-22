@@ -140,6 +140,57 @@ assertEqual(Core.ratiosAfterFlip(Core.OFF, 1024, 576), null, "flip OFF");
     assert(pw <= ph, "portrait pick from square stays portrait");
 }
 
+// RESOLUTION_PRESETS: SDXL/Pony + Illustrious buckets stay in-bounds / step-8
+{
+    assert(Array.isArray(Core.RESOLUTION_PRESETS), "presets is an array");
+    assertEqual(
+        Core.RESOLUTION_PRESETS.map((g) => g.label),
+        ["SDXL / Pony", "Illustrious"],
+        "preset group labels",
+    );
+
+    for (const group of Core.RESOLUTION_PRESETS) {
+        assert(group.options.length > 0, `${group.label} has options`);
+        for (const opt of group.options) {
+            assert(
+                opt.width % 8 === 0 && opt.height % 8 === 0,
+                `${opt.label} is multiple of 8`,
+            );
+            assert(
+                opt.width >= Core.MINIMUM_DIMENSION &&
+                    opt.width <= Core.MAXIMUM_DIMENSION &&
+                    opt.height >= Core.MINIMUM_DIMENSION &&
+                    opt.height <= Core.MAXIMUM_DIMENSION,
+                `${opt.label} within dimension bounds`,
+            );
+            const key = Core.resolutionPresetKey(opt.width, opt.height);
+            assertEqual(
+                Core.parseResolutionPreset(key),
+                [opt.width, opt.height],
+                `parse ${key}`,
+            );
+        }
+    }
+
+    assertEqual(
+        Core.parseResolutionPreset("1024x1024"),
+        [1024, 1024],
+        "parse square SDXL",
+    );
+    assertEqual(
+        Core.parseResolutionPreset("832x1216"),
+        [832, 1216],
+        "parse Pony portrait",
+    );
+    assertEqual(
+        Core.parseResolutionPreset("1536x1536"),
+        [1536, 1536],
+        "parse Illustrious square",
+    );
+    assertEqual(Core.parseResolutionPreset(""), null, "parse empty");
+    assertEqual(Core.parseResolutionPreset("Off"), null, "parse Off");
+}
+
 if (failed) {
     console.error(`\n${failed} failure(s)`);
     process.exit(1);

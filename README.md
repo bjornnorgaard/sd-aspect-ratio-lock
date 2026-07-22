@@ -10,6 +10,7 @@ Functionality is inspired by the archived [sd-webui-aspect-ratio-helper](https:/
 
 - **JavaScript aspect ratio controls** next to the width/height swap button (txt2img and img2img)
   - Dropdown (or cycle button) of configurable ratios (`1:1`, `16:9`, …)
+  - **Resolution presets** for SDXL / Pony (~1024²) and Illustrious (~1536²)
   - `🔒` locks to the current W×H ratio
   - `🖼️` (img2img) locks to the loaded image’s ratio, including ForgeCanvas inputs
   - Swap (`⇅`) also flips configured ratio labels (`4:3` ↔ `3:4`)
@@ -39,9 +40,10 @@ If you previously installed `sd-webui-aspect-ratio-helper`, disable or remove it
 ## Quick start
 
 1. Leave **Enable JavaScript aspect ratio controls** on (Settings → Aspect Ratio Lock). Default ratios: `1:1, 3:2, 4:3, 5:4, 16:9`.
-2. Pick a ratio from the dropdown, then drag width or height — the other dimension follows.
-3. Use `🔒` to freeze whatever ratio you already have, or `🖼️` on img2img to follow the source image.
-4. To enable the accordion tools, turn off **Hide accordion by default** and enable the individual button groups under Settings → Aspect Ratio Lock.
+2. Use **Presets…** (above the ratio control) to jump to SDXL / Pony or Illustrious native resolutions.
+3. Pick a ratio from the dropdown, then drag width or height — the other dimension follows.
+4. Use `🔒` to freeze whatever ratio you already have, or `🖼️` on img2img to follow the source image.
+5. To enable the accordion tools, turn off **Hide accordion by default** and enable the individual button groups under Settings → Aspect Ratio Lock.
 
 ## Documentation
 

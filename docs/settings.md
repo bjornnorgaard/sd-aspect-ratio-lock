@@ -10,12 +10,22 @@ Restart (or reload UI) after changing JS-related options so the client script pi
 |---|---|---|
 | Enable JavaScript aspect ratio controls | `arl_javascript_aspect_ratio_show` | `True` |
 | JavaScript aspect ratio list | `arl_javascript_aspect_ratio` | `1:1, 3:2, 4:3, 5:4, 16:9` |
+| Show resolution presets | `arl_javascript_resolution_presets_show` | `True` |
 | JavaScript selection method | `arl_ui_javascript_selection_method` | `Aspect Ratios Dropdown` |
 
 Selection methods:
 
 - **Aspect Ratios Dropdown** — native `<select>` with Off / Lock / configured ratios (plus Image on img2img).
 - **Default Options Button** — single button that cycles Off → Lock (→ Image on img2img). Configured ratio strings are not included in cycle mode.
+
+**Resolution presets** sit above the ratio control and set exact width × height:
+
+| Group | Resolutions |
+|---|---|
+| SDXL / Pony (~1024²) | `1024×1024`, `1152×896`, `896×1152`, `1216×832`, `832×1216`, `1344×768`, `768×1344`, `1536×640`, `640×1536` |
+| Illustrious (~1536²) | `1536×1536`, `1024×1536`, `1536×1024`, `1248×1824`, `1824×1248` |
+
+Pony shares SDXL’s native buckets. Illustrious is trained around 1536px. If a ratio lock is already active when you pick a preset, the control switches to `🔒` for that size.
 
 While a ratio is active, changing width or height updates the other side, clamps to `64–2048`, and rounds to a multiple of 8. The WebUI `dimensionChange` helper is called so the img2img aspect-ratio overlay stays in sync.
 

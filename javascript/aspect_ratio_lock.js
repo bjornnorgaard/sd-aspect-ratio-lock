@@ -81,6 +81,11 @@
             .filter(Boolean);
     }
 
+    function resolutionPresetsEnabled() {
+        const o = getOpts();
+        return !!(o && o.arl_javascript_resolution_presets_show);
+    }
+
     function reverseAllOptions() {
         const allAspectRatioOptions = Array.from(
             gradioApp().querySelectorAll(".arl-ar-option"),
@@ -129,6 +134,14 @@
                 "click",
                 this.switchButtonOnclick(controller),
             );
+
+            if (resolutionPresetsEnabled()) {
+                this.presetsController = new ResolutionPresetsController(
+                    page,
+                    controller,
+                    wrapperDiv,
+                );
+            }
         }
 
         getOptions(defaultOptions) {
@@ -247,6 +260,51 @@
         }
     }
 
+    class ResolutionPresetsController {
+        constructor(page, controller, toolbox) {
+            this.page = page;
+            this.controller = controller;
+
+            const wrap = document.createElement("div");
+            wrap.id = `${page}_resolution_presets`;
+            wrap.className = "arl-resolution-presets";
+            wrap.innerHTML = this.buildSelectHtml();
+
+            // Place above the aspect-ratio picker, still next to the swap button.
+            toolbox.insertBefore(wrap, toolbox.firstChild);
+
+            this.select = wrap.querySelector("select");
+            this.select.addEventListener("change", () => this.onPresetPicked());
+        }
+
+        buildSelectHtml() {
+            const groups = Core.RESOLUTION_PRESETS.map((group) => {
+                const options = group.options
+                    .map((opt) => {
+                        const key = Core.resolutionPresetKey(opt.width, opt.height);
+                        return `<option value="${key}">${opt.label}</option>`;
+                    })
+                    .join("\n");
+                return `<optgroup label="${group.label}">${options}</optgroup>`;
+            }).join("\n");
+
+            return `
+        <select id="${this.page}_select_resolution_preset" class="gr-box gr-input w-full disabled:cursor-not-allowed" title="Set width × height to a model-native resolution">
+            <option value="">Presets…</option>
+            ${groups}
+        </select>
+        `;
+        }
+
+        onPresetPicked() {
+            const parsed = Core.parseResolutionPreset(this.select.value);
+            if (!parsed) return;
+            this.controller.applyResolutionPreset(parsed[0], parsed[1]);
+            // Reset so the same preset can be re-applied after manual edits.
+            this.select.value = "";
+        }
+    }
+
     class SliderController {
         constructor(element) {
             this.element = element;
@@ -326,6 +384,64 @@
             }
 
             this.setAspectRatio(OFF);
+        }
+
+        /**
+         * Snap W×H to an exact preset resolution. If a ratio lock is active,
+         * switch to 🔒 with the preset’s ratio so later drags stay aligned.
+         */
+        applyResolutionPreset(width, height) {
+            const [w, h] = Core.clampToBoundaries(width, height);
+            const roundedW = Core.roundToClosestMultiple(w, 8);
+            const roundedH = Core.roundToClosestMultiple(h, 8);
+
+            const inputEvent = new Event("input", { bubbles: true });
+            this.widthContainer.setVal(roundedW);
+            this.widthContainer.triggerEvent(inputEvent);
+            this.heightContainer.setVal(roundedH);
+            this.heightContainer.triggerEvent(inputEvent);
+
+            if (this.aspectRatio !== OFF) {
+                this.aspectRatio = LOCK;
+                this.widthRatio = roundedW;
+                this.heightRatio = roundedH;
+                this.updateInputStates();
+                this.syncPickerToLock();
+            }
+
+            if (typeof dimensionChange === "function") {
+                this.heightContainer.inputs.forEach((input) => {
+                    dimensionChange({ target: input }, false, true);
+                });
+                this.widthContainer.inputs.forEach((input) => {
+                    dimensionChange({ target: input }, true, false);
+                });
+            }
+        }
+
+        syncPickerToLock() {
+            const picker = this.optionPickingControler;
+            if (!picker) return;
+
+            const el = picker.getPickerElement();
+            if (el && el.tagName === "SELECT") {
+                const options = Array.from(el.options);
+                const lockIdx = options.findIndex((o) => o.value === LOCK);
+                if (lockIdx >= 0) {
+                    el.selectedIndex = lockIdx;
+                }
+                return;
+            }
+
+            if (typeof picker.currentIndex === "number" && Array.isArray(picker.options)) {
+                const lockIdx = picker.options.indexOf(LOCK);
+                if (lockIdx < 0) return;
+                picker.currentIndex = lockIdx;
+                const button = el && el.querySelector("button");
+                if (button) {
+                    button.textContent = LOCK;
+                }
+            }
         }
 
         updateInputStates() {

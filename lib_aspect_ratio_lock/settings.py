@@ -35,6 +35,7 @@ OPT_KEY_TO_DEFAULT_MAP: dict[str, object] = {
     constants.ARL_UI_JAVASCRIPT_SELECTION_METHOD: "Aspect Ratios Dropdown",
     constants.ARL_JAVASCRIPT_ASPECT_RATIO_SHOW_KEY: True,
     constants.ARL_JAVASCRIPT_ASPECT_RATIOS_KEY: "1:1, 3:2, 4:3, 5:4, 16:9",
+    constants.ARL_JAVASCRIPT_RESOLUTION_PRESETS_SHOW_KEY: True,
     constants.ARL_SHOW_MAX_WIDTH_OR_HEIGHT_KEY: False,
     constants.ARL_MAX_WIDTH_OR_HEIGHT_KEY: constants.MAX_DIMENSION / 2,
     constants.ARL_SHOW_MIN_WIDTH_OR_HEIGHT_KEY: False,
@@ -102,6 +103,19 @@ def on_ui_settings() -> None:
                 constants.ARL_JAVASCRIPT_ASPECT_RATIOS_KEY,
             ),
             label="JavaScript aspect ratio list (1:1, 4:3, 16:9, …)",
+            section=constants.SECTION,
+        ),
+    )
+    shared.opts.add_option(
+        key=constants.ARL_JAVASCRIPT_RESOLUTION_PRESETS_SHOW_KEY,
+        info=shared.OptionInfo(
+            default=OPT_KEY_TO_DEFAULT_MAP.get(
+                constants.ARL_JAVASCRIPT_RESOLUTION_PRESETS_SHOW_KEY,
+            ),
+            label=(
+                "Show SDXL / Pony / Illustrious resolution presets "
+                "(next to aspect ratio control)"
+            ),
             section=constants.SECTION,
         ),
     )
