@@ -35,7 +35,7 @@ Option keys and CSS/JS IDs use the `arl_` / `arl-` prefix. Settings section id i
 - Read settings from the bare global `opts` (Forge `javascript/ui.js`). **Never use `window.opts`** — Forge Neo does not assign it.
 - Boot with `onOptionsAvailable(...)` so init runs after `opts` is parsed from `#settings_json`. Do not rely only on a MutationObserver after `onUiLoaded`: `opts` can become ready without a further DOM mutation.
 - Try mounting immediately when width/height exist; keep a MutationObserver only as a fallback until init succeeds.
-- Resolution presets (SDXL / Pony / Illustrious) live in `arl_core.js` as `RESOLUTION_PRESETS` and are rendered by `aspect_ratio_lock.js` above the ratio picker.
+- Resolution presets (SDXL / Pony / Illustrious) live in `arl_core.js` as `RESOLUTION_PRESETS` and are merged into the aspect-ratio `<select>` as `<optgroup>`s (not a second control).
 
 ## When changing math
 

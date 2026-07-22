@@ -113,8 +113,8 @@ def on_ui_settings() -> None:
                 constants.ARL_JAVASCRIPT_RESOLUTION_PRESETS_SHOW_KEY,
             ),
             label=(
-                "Show SDXL / Pony / Illustrious resolution presets "
-                "(next to aspect ratio control)"
+                "Include SDXL / Pony / Illustrious resolution presets "
+                "in the aspect ratio dropdown"
             ),
             section=constants.SECTION,
         ),

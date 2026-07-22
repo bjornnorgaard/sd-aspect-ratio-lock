@@ -6,19 +6,14 @@
 }
 
 #txt2img_ratio,
-#img2img_ratio,
-#txt2img_resolution_presets,
-#img2img_resolution_presets,
-.arl-resolution-presets {
+#img2img_ratio {
     padding: 0;
     min-width: unset;
     max-width: fit-content;
 }
 
 #txt2img_ratio select,
-#img2img_ratio select,
-#txt2img_resolution_presets select,
-#img2img_resolution_presets select {
+#img2img_ratio select {
     background: var(--background-fill-primary);
     border: 1px solid var(--block-border-color);
     color: var(--block-label-text-color);
@@ -38,14 +33,6 @@
     padding-left: 2px;
     text-align: center;
     min-width: 2.5em;
-}
-
-#txt2img_resolution_presets select,
-#img2img_resolution_presets select {
-    min-width: 7.5em;
-    text-align: left;
-    padding-left: 6px;
-    padding-right: 6px;
 }
 
 .arl-btn-row button {

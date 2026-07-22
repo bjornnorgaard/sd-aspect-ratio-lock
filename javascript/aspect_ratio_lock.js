@@ -134,14 +134,6 @@
                 "click",
                 this.switchButtonOnclick(controller),
             );
-
-            if (resolutionPresetsEnabled()) {
-                this.presetsController = new ResolutionPresetsController(
-                    page,
-                    controller,
-                    wrapperDiv,
-                );
-            }
         }
 
         getOptions(defaultOptions) {
@@ -151,11 +143,30 @@
         pickerChanged(controller) {
             return () => {
                 const picked = this.getCurrentOption();
+                const dims = Core.parseResolutionPreset(picked);
+                if (dims) {
+                    this.switchButton.removeAttribute("disabled");
+                    controller.applyResolutionPreset(dims[0], dims[1]);
+                    return;
+                }
                 if (picked !== IMAGE) {
                     this.switchButton.removeAttribute("disabled");
                 }
                 controller.setAspectRatio(picked);
             };
+        }
+
+        buildResolutionPresetOptgroups() {
+            if (!resolutionPresetsEnabled()) return "";
+            return Core.RESOLUTION_PRESETS.map((group) => {
+                const options = group.options
+                    .map((opt) => {
+                        const key = Core.resolutionPresetKey(opt.width, opt.height);
+                        return `<option value="${key}">${opt.label}</option>`;
+                    })
+                    .join("\n");
+                return `<optgroup label="${group.label}">${options}</optgroup>`;
+            }).join("\n");
         }
 
         /**
@@ -190,12 +201,18 @@
 
     class SelectOptionPickingController extends OptionPickingController {
         getElementInnerHTML() {
+            const ratioOptions = this.options
+                .map((r) => {
+                    // Only flip ratio strings on swap — leave Off / Lock / Image alone.
+                    const cls = String(r).includes(":") ? ' class="arl-ar-option"' : "";
+                    return `<option${cls} value="${r}">${r}</option>`;
+                })
+                .join("\n");
             return `
         <div id="${this.page}_ratio" class="gr-block gr-box relative w-full border-solid border border-gray-200 gr-padded">
-            <select id="${this.page}_select_aspect_ratio" class="gr-box gr-input w-full disabled:cursor-not-allowed">
-                ${this.options
-                    .map((r) => `<option class="arl-ar-option" value="${r}">${r}</option>`)
-                    .join("\n")}
+            <select id="${this.page}_select_aspect_ratio" class="gr-box gr-input w-full disabled:cursor-not-allowed" title="Aspect ratio or model resolution preset">
+                ${ratioOptions}
+                ${this.buildResolutionPresetOptgroups()}
             </select>
         </div>
         `;
@@ -257,51 +274,6 @@
 
         getCurrentOption() {
             return this.options[this.currentIndex || 0];
-        }
-    }
-
-    class ResolutionPresetsController {
-        constructor(page, controller, toolbox) {
-            this.page = page;
-            this.controller = controller;
-
-            const wrap = document.createElement("div");
-            wrap.id = `${page}_resolution_presets`;
-            wrap.className = "arl-resolution-presets";
-            wrap.innerHTML = this.buildSelectHtml();
-
-            // Place above the aspect-ratio picker, still next to the swap button.
-            toolbox.insertBefore(wrap, toolbox.firstChild);
-
-            this.select = wrap.querySelector("select");
-            this.select.addEventListener("change", () => this.onPresetPicked());
-        }
-
-        buildSelectHtml() {
-            const groups = Core.RESOLUTION_PRESETS.map((group) => {
-                const options = group.options
-                    .map((opt) => {
-                        const key = Core.resolutionPresetKey(opt.width, opt.height);
-                        return `<option value="${key}">${opt.label}</option>`;
-                    })
-                    .join("\n");
-                return `<optgroup label="${group.label}">${options}</optgroup>`;
-            }).join("\n");
-
-            return `
-        <select id="${this.page}_select_resolution_preset" class="gr-box gr-input w-full disabled:cursor-not-allowed" title="Set width × height to a model-native resolution">
-            <option value="">Presets…</option>
-            ${groups}
-        </select>
-        `;
-        }
-
-        onPresetPicked() {
-            const parsed = Core.parseResolutionPreset(this.select.value);
-            if (!parsed) return;
-            this.controller.applyResolutionPreset(parsed[0], parsed[1]);
-            // Reset so the same preset can be re-applied after manual edits.
-            this.select.value = "";
         }
     }
 
@@ -387,8 +359,8 @@
         }
 
         /**
-         * Snap W×H to an exact preset resolution. If a ratio lock is active,
-         * switch to 🔒 with the preset’s ratio so later drags stay aligned.
+         * Snap W×H to an exact preset resolution, then select 🔒 so the shared
+         * dropdown leaves the WxH option and later drags keep that ratio.
          */
         applyResolutionPreset(width, height) {
             const [w, h] = Core.clampToBoundaries(width, height);
@@ -401,13 +373,11 @@
             this.heightContainer.setVal(roundedH);
             this.heightContainer.triggerEvent(inputEvent);
 
-            if (this.aspectRatio !== OFF) {
-                this.aspectRatio = LOCK;
-                this.widthRatio = roundedW;
-                this.heightRatio = roundedH;
-                this.updateInputStates();
-                this.syncPickerToLock();
-            }
+            this.aspectRatio = LOCK;
+            this.widthRatio = roundedW;
+            this.heightRatio = roundedH;
+            this.updateInputStates();
+            this.syncPickerToLock();
 
             if (typeof dimensionChange === "function") {
                 this.heightContainer.inputs.forEach((input) => {
