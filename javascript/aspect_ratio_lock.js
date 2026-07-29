@@ -81,11 +81,6 @@
             .filter(Boolean);
     }
 
-    function resolutionPresetsEnabled() {
-        const o = getOpts();
-        return !!(o && o.arl_javascript_resolution_presets_show);
-    }
-
     function reverseAllOptions() {
         const allAspectRatioOptions = Array.from(
             gradioApp().querySelectorAll(".arl-ar-option"),
@@ -143,30 +138,11 @@
         pickerChanged(controller) {
             return () => {
                 const picked = this.getCurrentOption();
-                const dims = Core.parseResolutionPreset(picked);
-                if (dims) {
-                    this.switchButton.removeAttribute("disabled");
-                    controller.applyResolutionPreset(dims[0], dims[1]);
-                    return;
-                }
                 if (picked !== IMAGE) {
                     this.switchButton.removeAttribute("disabled");
                 }
                 controller.setAspectRatio(picked);
             };
-        }
-
-        buildResolutionPresetOptgroups() {
-            if (!resolutionPresetsEnabled()) return "";
-            return Core.RESOLUTION_PRESETS.map((group) => {
-                const options = group.options
-                    .map((opt) => {
-                        const key = Core.resolutionPresetKey(opt.width, opt.height);
-                        return `<option value="${key}">${opt.label}</option>`;
-                    })
-                    .join("\n");
-                return `<optgroup label="${group.label}">${options}</optgroup>`;
-            }).join("\n");
         }
 
         /**
@@ -210,9 +186,8 @@
                 .join("\n");
             return `
         <div id="${this.page}_ratio" class="gr-block gr-box relative w-full border-solid border border-gray-200 gr-padded">
-            <select id="${this.page}_select_aspect_ratio" class="gr-box gr-input w-full disabled:cursor-not-allowed" title="Aspect ratio or model resolution preset">
+            <select id="${this.page}_select_aspect_ratio" class="gr-box gr-input w-full disabled:cursor-not-allowed" title="Aspect ratio">
                 ${ratioOptions}
-                ${this.buildResolutionPresetOptgroups()}
             </select>
         </div>
         `;
@@ -356,62 +331,6 @@
             }
 
             this.setAspectRatio(OFF);
-        }
-
-        /**
-         * Snap W×H to an exact preset resolution, then select 🔒 so the shared
-         * dropdown leaves the WxH option and later drags keep that ratio.
-         */
-        applyResolutionPreset(width, height) {
-            const [w, h] = Core.clampToBoundaries(width, height);
-            const roundedW = Core.roundToClosestMultiple(w, 8);
-            const roundedH = Core.roundToClosestMultiple(h, 8);
-
-            const inputEvent = new Event("input", { bubbles: true });
-            this.widthContainer.setVal(roundedW);
-            this.widthContainer.triggerEvent(inputEvent);
-            this.heightContainer.setVal(roundedH);
-            this.heightContainer.triggerEvent(inputEvent);
-
-            this.aspectRatio = LOCK;
-            this.widthRatio = roundedW;
-            this.heightRatio = roundedH;
-            this.updateInputStates();
-            this.syncPickerToLock();
-
-            if (typeof dimensionChange === "function") {
-                this.heightContainer.inputs.forEach((input) => {
-                    dimensionChange({ target: input }, false, true);
-                });
-                this.widthContainer.inputs.forEach((input) => {
-                    dimensionChange({ target: input }, true, false);
-                });
-            }
-        }
-
-        syncPickerToLock() {
-            const picker = this.optionPickingControler;
-            if (!picker) return;
-
-            const el = picker.getPickerElement();
-            if (el && el.tagName === "SELECT") {
-                const options = Array.from(el.options);
-                const lockIdx = options.findIndex((o) => o.value === LOCK);
-                if (lockIdx >= 0) {
-                    el.selectedIndex = lockIdx;
-                }
-                return;
-            }
-
-            if (typeof picker.currentIndex === "number" && Array.isArray(picker.options)) {
-                const lockIdx = picker.options.indexOf(LOCK);
-                if (lockIdx < 0) return;
-                picker.currentIndex = lockIdx;
-                const button = el && el.querySelector("button");
-                if (button) {
-                    button.textContent = LOCK;
-                }
-            }
         }
 
         updateInputStates() {
