@@ -52,16 +52,17 @@ Behaviour comes from the archived `sd-webui-aspect-ratio-helper`. Prefer fixing 
 This repo follows [Semantic Versioning](https://semver.org). **Git tags are the version of record** — there is no version file to keep in sync.
 
 - Tags are annotated and named `vMAJOR.MINOR.PATCH` (e.g. `v0.3.1`), created on `main`.
-- **MAJOR stays `0`.** Do not release `1.0.0` (or any `1.x`) unless the owner explicitly says the project is ready. While on `0.x`, a breaking change bumps MINOR.
-- **MINOR** — a new user-facing feature (a new control, ratio behaviour, or preset group); a new, renamed, or changed-default `arl_*` setting; any breaking change.
+- The project reached **`1.0.0`** by the owner's decision. Bump MAJOR only for a genuine breaking change, and tell the owner before tagging a new MAJOR.
+- **MAJOR** — a breaking change: a removed or renamed `arl_*` setting key, or a behaviour change that breaks existing users' saved settings or workflows.
+- **MINOR** — a new user-facing feature (a new control, ratio behaviour, or preset group); a new `arl_*` setting or a changed default that existing users can still work around.
 - **PATCH** — a bug fix or a Forge Neo / Gradio compatibility fix with no new capability.
 - **No tag** — docs, tests, refactors, or `AGENTS.md` edits that do not change shipped behaviour.
-- If `git tag` is empty, the first release is `v0.1.0`.
+- The release line starts at `v1.0.0`.
 
 Whenever you commit and push a releasable change to `main`, tag it in the same push:
 
 ```bash
-git describe --tags --abbrev=0                      # latest version (none yet -> v0.1.0)
+git describe --tags --abbrev=0                      # latest version
 # ... commit the change on main ...
 git tag -a vX.Y.Z -m "vX.Y.Z: <one-line summary>"    # on the commit that ships the change
 git push origin main vX.Y.Z                         # commit and tag together
